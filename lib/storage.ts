@@ -4,8 +4,12 @@ import { getSupabase } from "./supabase";
 const BUCKET = "decks";
 const TABLE = "decks";
 
+// Storage keys must stay ASCII-only — Supabase Storage (S3-compatible) rejects object keys
+// containing the Korean characters in deck.fileName ("Invalid key"). The human-readable
+// Korean name lives only in the `file_name` DB column and is sent via Content-Disposition
+// on download, never used as the storage path itself.
 function objectPath(deck: Pick<GeneratedDeck, "id" | "fileName">): string {
-  return `${deck.id}/${deck.fileName}`;
+  return `${deck.id}/deck.pptx`;
 }
 
 interface DeckRow {
