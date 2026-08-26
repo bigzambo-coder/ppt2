@@ -25,6 +25,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "topic과 institutionName은 필수예요." }, { status: 400 });
   }
 
+  try {
+    return await generateDeck(body);
+  } catch (err) {
+    console.error("POST /api/generate failed", err);
+    const message = err instanceof Error ? err.message : "알 수 없는 서버 오류가 발생했어요.";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function generateDeck(body: any): Promise<NextResponse> {
   const brief: Brief = {
     docType: body.docType,
     topic: String(body.topic),
