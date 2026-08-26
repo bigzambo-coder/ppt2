@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { listDecks } from "@/lib/storage";
 
+// Reads live data from Supabase on every request — must never be statically prerendered
+// at build time (when the Supabase env vars may not even be set yet).
+export const dynamic = "force-dynamic";
+
 const DOC_TYPE_LABEL: Record<string, string> = {
   proposal: "제안서",
   presentation: "발표 PPT",
