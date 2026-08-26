@@ -6,8 +6,8 @@ const CYCLE: SlideLayout[] = ["bullets", "table", "stats", "process", "compare"]
 
 /**
  * Deterministic slide content used when no ANTHROPIC_API_KEY is configured (or the LLM call
- * fails). Not as tailored as the AI path, but keeps the app fully usable without a key —
- * carried over from the prior project's defaultContent() safety net.
+ * fails). Content is keyed to each section's own title (not one repeated block) so a deck
+ * without AI still reads as section-specific rather than a template stamped out five times.
  */
 export function buildFallbackSlides(input: {
   brief: Brief;
@@ -30,9 +30,10 @@ export function buildFallbackSlides(input: {
 
     if (layout === "bullets") {
       base.bullets = [
-        `${brief.institutionName} 대상 ${brief.topic} 관련 내용 [기관 확인 필요]`,
+        `${section} 관점에서 본 ${brief.topic} [기관 확인 필요]`,
         brief.audience ? `대상: ${brief.audience}` : "대상: [직접 입력]",
-        research?.summary ? research.summary : "세부 내용은 브리프 입력 후 자동 생성돼요.",
+        brief.mustInclude ? `반드시 포함: ${brief.mustInclude}` : `${brief.institutionName} 상황에 맞춰 구체화할 부분이에요.`,
+        research?.summary ?? "AI 키를 연결하면 이 부분이 실제 내용으로 자동 채워져요.",
       ];
     } else if (layout === "table") {
       base.table = {
@@ -41,6 +42,7 @@ export function buildFallbackSlides(input: {
           ["대상", brief.audience ?? "[직접 입력]"],
           ["시간", brief.durationMinutes ? `${brief.durationMinutes}분` : "[직접 입력]"],
           ["주제", brief.topic],
+          ["관련 섹션", section],
         ],
       };
     } else if (layout === "stats") {
@@ -51,14 +53,20 @@ export function buildFallbackSlides(input: {
       ];
     } else if (layout === "process") {
       base.steps = [
-        { title: "도입", description: "목표와 활용 사례 공유" },
-        { title: "실습", description: `${brief.topic} 핵심 실습` },
-        { title: "정리", description: "결과물 점검과 다음 단계 안내" },
+        { title: "도입", description: `${section} 관련 목표와 활용 사례를 공유해요.` },
+        { title: "실습", description: `${brief.topic} 핵심 내용을 직접 실습해요.` },
+        { title: "정리", description: "결과물을 점검하고 다음 단계를 안내해요." },
       ];
     } else if (layout === "compare") {
       base.columns = [
-        { title: "현재 상태", items: ["[기관 확인 필요]"] },
-        { title: `${brief.topic} 적용 후`, items: ["[기관 확인 필요]"] },
+        {
+          title: "현재 상태",
+          items: [`${section} 관련 현황 [기관 확인 필요]`, "구체적인 문제점은 [직접 입력]"],
+        },
+        {
+          title: `${brief.topic} 적용 후`,
+          items: [`${section}이(가) 개선된 모습 [기관 확인 필요]`, "기대 효과는 [직접 입력]"],
+        },
       ];
     }
 

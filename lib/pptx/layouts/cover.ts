@@ -13,16 +13,15 @@ export function renderCover(slide: PptxGenJS.Slide, content: SlideContent, desig
     fill: { color: design.primary },
     line: { type: "none" },
   });
-  for (let i = 0; i < design.accent.length; i++) {
-    slide.addShape("rect", {
-      x: SLIDE_W * 0.62 - 0.12 - i * 0.12,
-      y: 0,
-      w: 0.08,
-      h: SLIDE_H,
-      fill: { color: design.accent[i] },
-      line: { type: "none" },
-    });
-  }
+  const badgeD = 0.9;
+  slide.addShape("ellipse", {
+    x: SLIDE_W * 0.62 + (SLIDE_W * 0.38 - badgeD) / 2,
+    y: SLIDE_H / 2 - badgeD / 2,
+    w: badgeD,
+    h: badgeD,
+    fill: { color: design.accent[0] ?? design.background },
+    line: { type: "none" },
+  });
 
   slide.addText(content.title ?? "", {
     x: 0.8,
@@ -34,6 +33,8 @@ export function renderCover(slide: PptxGenJS.Slide, content: SlideContent, desig
     bold: true,
     color: design.textPrimary,
     valign: "bottom",
+    isTextBox: true,
+    margin: 0,
   });
 
   if (content.subtitle) {
@@ -45,6 +46,8 @@ export function renderCover(slide: PptxGenJS.Slide, content: SlideContent, desig
       fontFace: design.fontBody,
       fontSize: 18,
       color: design.textSecondary,
+      isTextBox: true,
+      margin: 0,
     });
   }
 }

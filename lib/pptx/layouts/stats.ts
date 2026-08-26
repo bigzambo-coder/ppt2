@@ -9,8 +9,12 @@ export function renderStats(slide: PptxGenJS.Slide, content: SlideContent, desig
   const stats = content.stats ?? [];
   if (stats.length === 0) return;
 
-  const top = 2.6;
-  const bottom = SLIDE_H - MARGIN;
+  // Center the value+label block within the content area rather than pinning it to the
+  // bottom — anchoring to the bottom left a large dead zone above the numbers.
+  const contentTop = 1.7;
+  const contentBottom = SLIDE_H - MARGIN;
+  const blockH = 1.3;
+  const numberY = contentTop + (contentBottom - contentTop - blockH) / 2;
   const gap = 0.3;
   const totalW = SLIDE_W - MARGIN * 2;
   const cellW = (totalW - gap * (stats.length - 1)) / stats.length;
@@ -21,25 +25,29 @@ export function renderStats(slide: PptxGenJS.Slide, content: SlideContent, desig
 
     slide.addText(stat.value, {
       x,
-      y: top,
+      y: numberY,
       w: cellW,
-      h: bottom - top - 1.0,
+      h: 0.9,
       align: "center",
       valign: "bottom",
       fontFace: design.fontHeading,
       fontSize: 44,
       bold: true,
       color: accent,
+      isTextBox: true,
+      margin: 0,
     });
     slide.addText(stat.label, {
       x,
-      y: bottom - 0.8,
+      y: numberY + 0.95,
       w: cellW,
-      h: 0.6,
+      h: 0.4,
       align: "center",
       fontFace: design.fontBody,
       fontSize: 14,
       color: design.textSecondary,
+      isTextBox: true,
+      margin: 0,
     });
   });
 }

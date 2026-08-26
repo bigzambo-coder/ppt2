@@ -9,7 +9,7 @@ export function renderCompare(slide: PptxGenJS.Slide, content: SlideContent, des
   const columns = content.columns ?? [];
   if (columns.length === 0) return;
 
-  const top = 2.0;
+  const top = 1.85;
   const bottom = SLIDE_H - MARGIN;
   const gap = 0.35;
   const totalW = SLIDE_W - MARGIN * 2;
@@ -35,11 +35,13 @@ export function renderCompare(slide: PptxGenJS.Slide, content: SlideContent, des
       fontSize: 18,
       bold: true,
       color: design.primary,
+      isTextBox: true,
+      margin: 0,
     });
     slide.addText(
       col.items.map((text) => ({
         text,
-        options: { bullet: { characterCode: "2022", indent: 16 }, breakLine: true, paraSpaceAfter: 8 },
+        options: { bullet: { characterCode: "2022", indent: 16 }, breakLine: true, paraSpaceAfter: 10 },
       })),
       {
         x: x + 0.25,
@@ -50,6 +52,8 @@ export function renderCompare(slide: PptxGenJS.Slide, content: SlideContent, des
         fontSize: 15,
         color: design.textPrimary,
         valign: "top",
+        isTextBox: true,
+        margin: 0,
       }
     );
   });

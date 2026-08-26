@@ -1,6 +1,6 @@
 import type PptxGenJS from "pptxgenjs";
 import { DesignToken, SlideContent } from "../../types";
-import { SLIDE_W, SLIDE_H, MARGIN, shapeType, paintBackground, addTitle } from "../theme";
+import { SLIDE_W, MARGIN, shapeType, paintBackground, addTitle } from "../theme";
 
 export function renderProcess(slide: PptxGenJS.Slide, content: SlideContent, design: DesignToken): void {
   paintBackground(slide, design);
@@ -9,8 +9,8 @@ export function renderProcess(slide: PptxGenJS.Slide, content: SlideContent, des
   const steps = content.steps ?? [];
   if (steps.length === 0) return;
 
-  const top = 2.3;
-  const bottom = SLIDE_H - MARGIN;
+  const top = 2.1;
+  const cardH = 2.7;
   const gap = 0.3;
   const totalW = SLIDE_W - MARGIN * 2;
   const boxW = (totalW - gap * (steps.length - 1)) / steps.length;
@@ -38,6 +38,8 @@ export function renderProcess(slide: PptxGenJS.Slide, content: SlideContent, des
       fontSize: 18,
       bold: true,
       color: design.background,
+      isTextBox: true,
+      margin: 0,
     });
 
     if (i < steps.length - 1) {
@@ -54,32 +56,36 @@ export function renderProcess(slide: PptxGenJS.Slide, content: SlideContent, des
       x,
       y: top + badgeD + 0.25,
       w: boxW,
-      h: bottom - top - badgeD - 0.25,
+      h: cardH,
       fill: { color: design.surface },
       line: { type: "none" },
       rectRadius: design.shapeLanguage === "rounded" ? 0.1 : undefined,
     });
     slide.addText(step.title, {
-      x: x + 0.15,
+      x: x + 0.2,
       y: top + badgeD + 0.4,
-      w: boxW - 0.3,
+      w: boxW - 0.4,
       h: 0.5,
       fontFace: design.fontHeading,
-      fontSize: 15,
+      fontSize: 16,
       bold: true,
       color: design.textPrimary,
       align: "center",
+      isTextBox: true,
+      margin: 0,
     });
     slide.addText(step.description, {
-      x: x + 0.15,
-      y: top + badgeD + 0.95,
-      w: boxW - 0.3,
-      h: bottom - (top + badgeD + 0.95),
+      x: x + 0.2,
+      y: top + badgeD + 1.0,
+      w: boxW - 0.4,
+      h: cardH - 1.1,
       fontFace: design.fontBody,
-      fontSize: 12,
+      fontSize: 13,
       color: design.textSecondary,
-      align: "center",
+      align: "left",
       valign: "top",
+      isTextBox: true,
+      margin: 0,
     });
   });
 }

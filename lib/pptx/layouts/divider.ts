@@ -7,11 +7,12 @@ const MARGIN_X = 0.9;
 export function renderDivider(slide: PptxGenJS.Slide, content: SlideContent, design: DesignToken): void {
   slide.background = { color: design.primary };
 
-  slide.addShape("rect", {
-    x: 0,
-    y: SLIDE_H / 2 + 0.7,
-    w: 1.4,
-    h: 0.08,
+  const badgeD = 0.5;
+  slide.addShape("ellipse", {
+    x: MARGIN_X,
+    y: SLIDE_H / 2 - 1.5,
+    w: badgeD,
+    h: badgeD,
     fill: { color: design.accent[0] ?? design.background },
     line: { type: "none" },
   });
@@ -25,6 +26,8 @@ export function renderDivider(slide: PptxGenJS.Slide, content: SlideContent, des
     fontSize: 36,
     bold: true,
     color: design.background,
+    isTextBox: true,
+    margin: 0,
   });
 
   if (content.subtitle) {
@@ -36,6 +39,8 @@ export function renderDivider(slide: PptxGenJS.Slide, content: SlideContent, des
       fontFace: design.fontBody,
       fontSize: 16,
       color: design.background,
+      isTextBox: true,
+      margin: 0,
     });
   }
 }

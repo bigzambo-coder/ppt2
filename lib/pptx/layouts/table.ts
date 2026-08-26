@@ -1,6 +1,8 @@
 import type PptxGenJS from "pptxgenjs";
 import { DesignToken, SlideContent } from "../../types";
-import { SLIDE_W, SLIDE_H, MARGIN, paintBackground, addTitle } from "../theme";
+import { SLIDE_W, MARGIN, paintBackground, addTitle } from "../theme";
+
+const ROW_H = 0.62;
 
 export function renderTable(slide: PptxGenJS.Slide, content: SlideContent, design: DesignToken): void {
   paintBackground(slide, design);
@@ -16,9 +18,10 @@ export function renderTable(slide: PptxGenJS.Slide, content: SlideContent, desig
       color: design.background,
       bold: true,
       fontFace: design.fontBody,
-      fontSize: 13,
+      fontSize: 14,
       align: "left",
       valign: "middle",
+      margin: [0.06, 0.12, 0.06, 0.12],
     },
   }));
 
@@ -29,20 +32,23 @@ export function renderTable(slide: PptxGenJS.Slide, content: SlideContent, desig
         fill: { color: colIdx === 0 ? design.surface : design.background },
         color: design.textPrimary,
         fontFace: design.fontBody,
-        fontSize: 13,
+        fontSize: 14,
         align: "left" as const,
         valign: "middle" as const,
         border: { type: "solid", color: design.surface, pt: 0.75 },
+        margin: [0.06, 0.12, 0.06, 0.12],
       },
     }))
   );
 
+  // Fixed per-row height instead of stretching the table to fill the slide — a short table
+  // (3-4 rows) forced to fill ~5" of remaining page height is what made rows look bloated.
   slide.addTable([headerRow, ...bodyRows], {
     x: MARGIN,
-    y: 2.0,
+    y: 1.9,
     w: SLIDE_W - MARGIN * 2,
-    h: SLIDE_H - 2.0 - MARGIN,
-    fontSize: 13,
+    rowH: ROW_H,
+    fontSize: 14,
     autoPage: false,
   });
 }

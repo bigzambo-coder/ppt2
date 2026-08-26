@@ -5,14 +5,14 @@ import { SLIDE_W, MARGIN, paintBackground, addTitle, addSubtitle } from "../them
 export function renderBullets(slide: PptxGenJS.Slide, content: SlideContent, design: DesignToken): void {
   paintBackground(slide, design);
   addTitle(slide, design, content.title ?? "");
-  const listY = content.subtitle ? 2.2 : 1.7;
+  const listY = content.subtitle ? 2.3 : 1.7;
   if (content.subtitle) addSubtitle(slide, design, content.subtitle);
 
   const bullets = content.bullets ?? [];
   slide.addText(
     bullets.map((text) => ({
       text,
-      options: { bullet: { characterCode: "25CF", indent: 20 }, breakLine: true, paraSpaceAfter: 14 },
+      options: { bullet: { characterCode: "25CF", indent: 20 }, breakLine: true, paraSpaceAfter: 16 },
     })),
     {
       x: MARGIN,
@@ -20,9 +20,11 @@ export function renderBullets(slide: PptxGenJS.Slide, content: SlideContent, des
       w: SLIDE_W - MARGIN * 2,
       h: 7.5 - listY - MARGIN,
       fontFace: design.fontBody,
-      fontSize: 20,
+      fontSize: 19,
       color: design.textPrimary,
       valign: "top",
+      isTextBox: true,
+      margin: 0,
     }
   );
 }

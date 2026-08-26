@@ -17,6 +17,8 @@ export function renderQuote(slide: PptxGenJS.Slide, content: SlideContent, desig
     fontSize: 26,
     italic: true,
     color: design.textPrimary,
+    isTextBox: true,
+    margin: 0,
   });
 
   if (content.quoteAttribution) {
@@ -29,6 +31,8 @@ export function renderQuote(slide: PptxGenJS.Slide, content: SlideContent, desig
       fontFace: design.fontBody,
       fontSize: 15,
       color: design.textSecondary,
+      isTextBox: true,
+      margin: 0,
     });
   }
 }
