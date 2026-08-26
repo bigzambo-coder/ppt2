@@ -1,51 +1,88 @@
-import { promises as fs } from "fs";
-import path from "path";
 import { GeneratedDeck } from "./types";
+import { getSupabase } from "./supabase";
 
-// Local filesystem storage for the MVP (dev-only: works with `npm run dev`, not Vercel's
-// read-only/ephemeral filesystem). Swap this module for Supabase Storage + Postgres in Phase 2
-// without touching callers — they only see saveDeck/getDeckMeta/getDeckFile/listDecks.
-const STORAGE_ROOT = path.join(process.cwd(), "storage");
+const BUCKET = "decks";
+const TABLE = "decks";
 
-function deckDir(id: string): string {
-  return path.join(STORAGE_ROOT, id);
+function objectPath(deck: Pick<GeneratedDeck, "id" | "fileName">): string {
+  return `${deck.id}/${deck.fileName}`;
+}
+
+interface DeckRow {
+  id: string;
+  doc_type: string;
+  file_name: string;
+  brief: GeneratedDeck["brief"];
+  classification: GeneratedDeck["classification"];
+  design: GeneratedDeck["design"];
+  slides: GeneratedDeck["slides"];
+  qa: GeneratedDeck["qa"];
+  used_llm: boolean;
+  created_at: string;
+}
+
+function rowToDeck(row: DeckRow): GeneratedDeck {
+  return {
+    id: row.id,
+    brief: row.brief,
+    classification: row.classification,
+    design: row.design,
+    slides: row.slides,
+    qa: row.qa,
+    usedLlm: row.used_llm,
+    fileName: row.file_name,
+    createdAt: row.created_at,
+  };
 }
 
 export async function saveDeck(deck: GeneratedDeck, pptxBuffer: Buffer): Promise<void> {
-  const dir = deckDir(deck.id);
-  await fs.mkdir(dir, { recursive: true });
-  await fs.writeFile(path.join(dir, "meta.json"), JSON.stringify(deck, null, 2), "utf-8");
-  await fs.writeFile(path.join(dir, deck.fileName), pptxBuffer);
+  const supabase = getSupabase();
+
+  const { error: uploadError } = await supabase.storage
+    .from(BUCKET)
+    .upload(objectPath(deck), pptxBuffer, {
+      contentType: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      upsert: true,
+    });
+  if (uploadError) throw uploadError;
+
+  const { error: insertError } = await supabase.from(TABLE).insert({
+    id: deck.id,
+    doc_type: deck.brief.docType,
+    file_name: deck.fileName,
+    brief: deck.brief,
+    classification: deck.classification,
+    design: deck.design,
+    slides: deck.slides,
+    qa: deck.qa,
+    used_llm: deck.usedLlm,
+    created_at: deck.createdAt,
+  });
+  if (insertError) throw insertError;
 }
 
 export async function getDeckMeta(id: string): Promise<GeneratedDeck | null> {
-  try {
-    const raw = await fs.readFile(path.join(deckDir(id), "meta.json"), "utf-8");
-    return JSON.parse(raw) as GeneratedDeck;
-  } catch {
-    return null;
-  }
+  const supabase = getSupabase();
+  const { data, error } = await supabase.from(TABLE).select("*").eq("id", id).maybeSingle();
+  if (error || !data) return null;
+  return rowToDeck(data as DeckRow);
 }
 
 export async function getDeckFile(id: string): Promise<{ buffer: Buffer; fileName: string } | null> {
   const meta = await getDeckMeta(id);
   if (!meta) return null;
-  try {
-    const buffer = await fs.readFile(path.join(deckDir(id), meta.fileName));
-    return { buffer, fileName: meta.fileName };
-  } catch {
-    return null;
-  }
+
+  const supabase = getSupabase();
+  const { data, error } = await supabase.storage.from(BUCKET).download(objectPath(meta));
+  if (error || !data) return null;
+
+  const buffer = Buffer.from(await data.arrayBuffer());
+  return { buffer, fileName: meta.fileName };
 }
 
 export async function listDecks(): Promise<GeneratedDeck[]> {
-  try {
-    const ids = await fs.readdir(STORAGE_ROOT);
-    const decks = await Promise.all(ids.map((id) => getDeckMeta(id)));
-    return decks
-      .filter((d): d is GeneratedDeck => d !== null)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  } catch {
-    return [];
-  }
+  const supabase = getSupabase();
+  const { data, error } = await supabase.from(TABLE).select("*").order("created_at", { ascending: false });
+  if (error || !data) return [];
+  return (data as DeckRow[]).map(rowToDeck);
 }
