@@ -10,7 +10,7 @@ export interface DesignPreset extends DesignToken {
   keywords: string[];
 }
 
-export const DESIGN_PRESETS: DesignPreset[] = [
+const BASE_PRESETS: DesignPreset[] = [
   {
     id: "public_data",
     label: "Public Data Blue",
@@ -172,6 +172,224 @@ export const DESIGN_PRESETS: DesignPreset[] = [
     keywords: ["브랜드", "리더", "임원", "프리미엄", "문화", "예술"],
   },
 ];
+
+// ---------------------------------------------------------------------------
+// Palettes adapted from the theme-factory skill (10 curated themes with color +
+// typography + "best used for" guidance). Two changes were needed to make them
+// usable here: the skill's Latin fonts (DejaVu / FreeSans / FreeSerif) are not
+// installed on Korean Windows and would render as tofu, so sans themes map to
+// 맑은 고딕 and the three serif-flavored themes map to 바탕 — both ship with
+// Korean Windows, and the sans/serif split preserves the real typographic
+// contrast the original themes were designed around. Light/dark roles
+// (background, surface, text) are derived from each palette's own four colors.
+// ---------------------------------------------------------------------------
+
+const THEME_FACTORY_PRESETS: DesignPreset[] = [
+  {
+    id: "ocean_depths",
+    label: "Ocean Depths",
+    background: "F1FAEE",
+    surface: "D8EDEE",
+    textPrimary: "1A2332",
+    textSecondary: "4A5A6A",
+    primary: "2D8B8B",
+    accent: ["1A2332"],
+    fontHeading: "맑은 고딕",
+    fontBody: "맑은 고딕",
+    mood: ["신뢰", "차분함", "전문성"],
+    shapeLanguage: "sharp",
+    institutionTypes: ["corporate", "public_general", "public_bid"],
+    keywords: ["금융", "컨설팅", "보고", "재무", "신뢰"],
+  },
+  {
+    id: "sunset_boulevard",
+    label: "Sunset Boulevard",
+    background: "FEF6EE",
+    surface: "F7DFC4",
+    textPrimary: "264653",
+    textSecondary: "6B7B7F",
+    primary: "E76F51",
+    accent: ["E9C46A"],
+    fontHeading: "바탕",
+    fontBody: "맑은 고딕",
+    mood: ["따뜻함", "창의", "활력"],
+    shapeLanguage: "rounded",
+    institutionTypes: ["event", "small_business", "corporate"],
+    keywords: ["마케팅", "브랜딩", "캠페인", "라이프스타일", "홍보"],
+  },
+  {
+    id: "forest_canopy",
+    label: "Forest Canopy",
+    background: "FAF9F6",
+    surface: "E4E8D9",
+    textPrimary: "2D4A2B",
+    textSecondary: "6B7365",
+    primary: "3E6B3B",
+    accent: ["A4AC86"],
+    fontHeading: "바탕",
+    fontBody: "맑은 고딕",
+    mood: ["자연", "지속가능", "안정"],
+    shapeLanguage: "organic",
+    institutionTypes: ["public_general", "school", "small_business"],
+    keywords: ["환경", "지속가능", "ESG", "친환경", "농업", "웰니스"],
+  },
+  {
+    id: "modern_minimalist",
+    label: "Modern Minimalist",
+    background: "FFFFFF",
+    surface: "EFF1F3",
+    textPrimary: "36454F",
+    textSecondary: "708090",
+    primary: "36454F",
+    accent: ["708090"],
+    fontHeading: "맑은 고딕",
+    fontBody: "맑은 고딕",
+    mood: ["미니멀", "절제", "가독성"],
+    shapeLanguage: "sharp",
+    institutionTypes: ["corporate", "public_bid", "public_general"],
+    keywords: ["건축", "디자인", "데이터", "미니멀", "심플"],
+  },
+  {
+    id: "golden_hour",
+    label: "Golden Hour",
+    background: "FDF8F0",
+    surface: "EFE0CC",
+    textPrimary: "4A403A",
+    textSecondary: "7D7168",
+    primary: "C1666B",
+    accent: ["F4A900"],
+    fontHeading: "맑은 고딕",
+    fontBody: "맑은 고딕",
+    mood: ["따뜻함", "환대", "수공예"],
+    shapeLanguage: "rounded",
+    institutionTypes: ["small_business", "event"],
+    keywords: ["요식", "외식", "카페", "숙박", "관광", "공예"],
+  },
+  {
+    id: "arctic_frost",
+    label: "Arctic Frost",
+    background: "FAFAFA",
+    surface: "D4E4F7",
+    textPrimary: "1E2C40",
+    textSecondary: "5C6A7D",
+    primary: "4A6FA5",
+    accent: ["7FA8D4"],
+    fontHeading: "맑은 고딕",
+    fontBody: "맑은 고딕",
+    mood: ["정밀", "청결", "명료"],
+    shapeLanguage: "sharp",
+    institutionTypes: ["public_general", "corporate", "school"],
+    keywords: ["의료", "보건", "제약", "안전", "위생", "품질"],
+  },
+  {
+    id: "desert_rose",
+    label: "Desert Rose",
+    background: "FBF4EE",
+    surface: "E8D5C4",
+    textPrimary: "5D2E46",
+    textSecondary: "8A6A72",
+    primary: "B87D6D",
+    accent: ["D4A5A5"],
+    fontHeading: "바탕",
+    fontBody: "맑은 고딕",
+    mood: ["우아함", "부드러움", "감성"],
+    shapeLanguage: "organic",
+    institutionTypes: ["small_business", "corporate"],
+    keywords: ["뷰티", "패션", "인테리어", "웨딩", "부티크"],
+  },
+  {
+    id: "tech_innovation",
+    label: "Tech Innovation",
+    background: "1E1E1E",
+    surface: "2C2F36",
+    textPrimary: "FFFFFF",
+    textSecondary: "A8B0BC",
+    primary: "0066FF",
+    accent: ["00E5E5"],
+    fontHeading: "맑은 고딕",
+    fontBody: "맑은 고딕",
+    mood: ["첨단", "고대비", "다크모드"],
+    shapeLanguage: "sharp",
+    institutionTypes: ["corporate", "event"],
+    keywords: ["소프트웨어", "SaaS", "플랫폼", "디지털전환", "혁신"],
+  },
+  {
+    id: "botanical_garden",
+    label: "Botanical Garden",
+    background: "F5F3ED",
+    surface: "DDE8DC",
+    textPrimary: "23331F",
+    textSecondary: "5F6B5A",
+    primary: "4A7C59",
+    accent: ["F9A620"],
+    fontHeading: "바탕",
+    fontBody: "맑은 고딕",
+    mood: ["생기", "유기적", "건강"],
+    shapeLanguage: "organic",
+    institutionTypes: ["school", "small_business", "public_general"],
+    keywords: ["식품", "먹거리", "돌봄", "보육", "건강", "로컬"],
+  },
+  {
+    id: "midnight_galaxy",
+    label: "Midnight Galaxy",
+    background: "2B1E3E",
+    surface: "3D2F53",
+    textPrimary: "E6E6FA",
+    textSecondary: "A99FC0",
+    primary: "A490C2",
+    accent: ["6E73C4"],
+    fontHeading: "맑은 고딕",
+    fontBody: "맑은 고딕",
+    mood: ["몰입", "프리미엄", "임팩트"],
+    shapeLanguage: "rounded",
+    institutionTypes: ["corporate", "event"],
+    keywords: ["콘텐츠", "엔터", "게임", "럭셔리", "크리에이티브"],
+  },
+];
+
+// From the lecture-slide-creator-v3 "SimpleP" analysis: monochrome + white
+// space + one optional gold accent, at a 60/30/10 white/black/cream ratio. It
+// is the most versatile look in the set — a deck that must not look "designed"
+// (심사, 보고, 임원 대상) reads better in this than in any colored palette.
+const MINIMAL_PRESETS: DesignPreset[] = [
+  {
+    id: "simplep_mono",
+    label: "SimpleP Monochrome",
+    background: "FFFFFF",
+    surface: "F5F0E8",
+    textPrimary: "000000",
+    textSecondary: "8A8A8A",
+    primary: "000000",
+    accent: ["C9A961"],
+    fontHeading: "맑은 고딕",
+    fontBody: "맑은 고딕",
+    mood: ["미니멀", "절제", "고급"],
+    shapeLanguage: "sharp",
+    institutionTypes: ["corporate", "public_bid", "public_general", "event"],
+    keywords: ["미니멀", "심플", "고급", "강의", "브랜드", "심사", "보고"],
+  },
+  {
+    id: "simplep_ink",
+    label: "SimpleP Ink",
+    background: "F7F7F5",
+    surface: "E8E8E4",
+    textPrimary: "1A1A1A",
+    textSecondary: "6E6E6E",
+    primary: "2D2D2D",
+    accent: ["C9A961"],
+    fontHeading: "바탕",
+    fontBody: "맑은 고딕",
+    mood: ["정제", "차분", "출판"],
+    shapeLanguage: "sharp",
+    institutionTypes: ["public_general", "corporate", "school"],
+    keywords: ["출판", "아카데미", "연구", "인문", "정책"],
+  },
+];
+
+// Built once as a literal. The previous version mutated the exported array at
+// module scope, so an HMR re-evaluation in dev appended the same palettes again
+// and the list grew on every hot reload.
+export const DESIGN_PRESETS: DesignPreset[] = [...BASE_PRESETS, ...THEME_FACTORY_PRESETS, ...MINIMAL_PRESETS];
 
 export function getPresetById(id: string): DesignPreset | undefined {
   return DESIGN_PRESETS.find((p) => p.id === id);

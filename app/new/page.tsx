@@ -1,209 +1,247 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useEffect, useMemo, useState, FormEvent } from "react";
 import Link from "next/link";
-import { DocType, GeneratedDeck } from "@/lib/types";
+import { useRouter } from "next/navigation";
+import { DesignToken, DocType } from "@/lib/types";
+import type { PlannedSlide } from "@/lib/content/blueprint";
+import { DOC_TYPES, getDocTypeSpec } from "@/lib/doctypes/registry";
+import { FIELD_GROUP_LABEL, IntakeField, resolveSlideCount } from "@/lib/doctypes/spec";
 
-const DOC_TYPE_OPTIONS: { value: DocType; label: string; hint: string }[] = [
-  { value: "proposal", label: "제안서", hint: "기관 유형에 맞는 목차로 자동 구성돼요" },
-  { value: "presentation", label: "발표 PPT", hint: "강의·발표용 슬라이드 흐름" },
-  { value: "intro", label: "회사·강사 소개서", hint: "본인/서비스 소개용" },
-];
-
-const LAYOUT_LABEL: Record<string, string> = {
-  cover: "표지",
-  divider: "구분",
-  bullets: "목록",
-  compare: "비교",
-  process: "단계",
-  stats: "통계",
-  table: "표",
-  quote: "인용",
-  closing: "마무리",
+const GROUP_ORDER: IntakeField["group"][] = ["core", "audience", "company", "presenter", "detail"];
+type PlanResult = {
+  plan: PlannedSlide[];
+  sources: { id: string; title: string; publisher: string }[];
+  designs: { variant: number; token: DesignToken }[];
+  slideCount: number;
+  outlineError?: string;
 };
 
 export default function NewProjectPage() {
-  const [docType, setDocType] = useState<DocType>("proposal");
+  const router = useRouter();
+  const [docType, setDocType] = useState<DocType | null>(null);
+  const [values, setValues] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [deck, setDeck] = useState<GeneratedDeck | null>(null);
+  const [aiReady, setAiReady] = useState<boolean | null>(null);
+  const [planResult, setPlanResult] = useState<PlanResult | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState(0);
 
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  useEffect(() => {
+    fetch("/api/status")
+      .then((res) => res.json())
+      .then((data: { aiReady?: boolean }) => setAiReady(Boolean(data.aiReady)))
+      .catch(() => setAiReady(null));
+  }, []);
+
+  const spec = docType ? getDocTypeSpec(docType) : null;
+
+  // Live estimate so the user sees the time→slides rule working as they type.
+  const estimate = useMemo(() => {
+    if (!spec) return null;
+    return resolveSlideCount(spec, {
+      slideCount: Number(values.slideCount) || undefined,
+      durationMinutes: Number(values.durationMinutes) || undefined,
+    });
+  }, [spec, values.slideCount, values.durationMinutes]);
+
+  const grouped = useMemo(() => {
+    if (!spec) return [];
+    return GROUP_ORDER.map((group) => ({
+      group,
+      fields: spec.fields.filter((f) => f.group === group),
+    })).filter((g) => g.fields.length > 0);
+  }, [spec]);
+
+  async function requestPlan() {
+    if (!spec) return;
     setLoading(true);
     setError(null);
-    setDeck(null);
-
-    const form = new FormData(e.currentTarget);
-    const body = Object.fromEntries(form.entries());
-    body.docType = docType;
-
     try {
-      const res = await fetch("/api/generate", {
+      const res = await fetch("/api/plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ docType: spec.id, fields: values }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "생성에 실패했어요.");
-      setDeck(json.deck as GeneratedDeck);
+      if (!res.ok) throw new Error(json.error ?? "조사와 목차 설계에 실패했어요.");
+      setPlanResult(json as PlanResult);
+      setSelectedVariant(json.designs?.[0]?.variant ?? 0);
+      setLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "알 수 없는 오류가 발생했어요.");
-    } finally {
       setLoading(false);
     }
   }
 
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    await requestPlan();
+  }
+
+  async function generateApprovedDeck() {
+    if (!spec || !planResult) return;
+    setLoading(true); setError(null);
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ docType: spec.id, fields: values, approvedPlan: planResult.plan, designVariant: selectedVariant }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "최종 PPT 생성에 실패했어요.");
+      router.push(`/deck/${json.deck.id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "알 수 없는 오류가 발생했어요."); setLoading(false);
+    }
+  }
+
+  // ---- Step 1: pick the document type ------------------------------------
+  if (!spec) {
+    return (
+      <div className="mx-auto min-h-screen max-w-3xl px-6 py-10">
+        <Link href="/" className="text-sm text-zinc-500 hover:underline">
+          ← 홈으로
+        </Link>
+        <h1 className="mt-2 text-2xl font-bold text-zinc-900">어떤 문서를 만들까요?</h1>
+        <p className="mt-1 text-sm text-zinc-500">
+          유형을 고르면 그 유형에 필요한 항목만 물어보고, 구성·장수·디자인을 자동으로 맞춰요.
+        </p>
+
+        <div className="mt-6 space-y-3">
+          {DOC_TYPES.map((d) => (
+            <button
+              key={d.id}
+              onClick={() => setDocType(d.id)}
+              className="flex w-full items-start justify-between gap-4 rounded-xl border border-zinc-200 p-5 text-left transition hover:border-zinc-900 hover:bg-zinc-50"
+            >
+              <span>
+                <span className="block font-semibold text-zinc-900">{d.label}</span>
+                <span className="mt-0.5 block text-xs font-medium text-zinc-500">{d.tagline}</span>
+                <span className="mt-2 block text-sm text-zinc-600">{d.description}</span>
+                <span className="mt-2 block text-xs text-zinc-400">
+                  {d.sizing.mode === "time" ? "시간 기준 자동 편성" : `표준 ${d.sizing.fallback}장 내외`} ·{" "}
+                  {d.sections.length}개 섹션 구성
+                </span>
+              </span>
+              <span className="mt-1 shrink-0 text-zinc-300">→</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (planResult) {
+    return (
+      <div className="mx-auto min-h-screen max-w-5xl px-6 py-10 text-zinc-900">
+        <button onClick={() => setPlanResult(null)} className="text-sm text-zinc-500 hover:underline">← 입력 내용 수정</button>
+        <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
+          <div><p className="text-xs font-semibold tracking-[0.18em] text-emerald-700">HIGH QUALITY · STEP 2</p><h1 className="mt-1 text-3xl font-bold">조사 결과와 맞춤 목차를 확인하세요</h1><p className="mt-2 text-sm text-zinc-500">승인한 목차와 디자인으로만 최종 PPT를 제작합니다.</p></div>
+          <div className="rounded-full bg-zinc-100 px-4 py-2 text-sm">{planResult.slideCount}장 · 출처 {planResult.sources.length}건</div>
+        </div>
+
+        {planResult.sources.length === 0 ? <div className="mt-6 rounded-xl bg-amber-50 p-4 text-sm text-amber-800">관련 조사 출처를 확보하지 못했습니다. 통계·실제 사례·외부 이미지는 사용하지 않습니다.</div> : (
+          <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4"><p className="text-sm font-semibold text-emerald-900">조사 출처 {planResult.sources.length}건 확보</p><p className="mt-1 text-xs text-emerald-800">{planResult.sources.slice(0, 3).map((s) => s.title).join(" · ")}</p></div>
+        )}
+
+        <section className="mt-8"><h2 className="text-xl font-bold">1. 디자인 방향 선택</h2><div className="mt-3 grid gap-3 md:grid-cols-3">{planResult.designs.map(({ variant, token }) => (
+          <button key={variant} onClick={() => setSelectedVariant(variant)} className={`overflow-hidden rounded-2xl border-2 text-left transition ${selectedVariant === variant ? "border-zinc-900 shadow-lg" : "border-zinc-200 hover:border-zinc-400"}`}>
+            <div className="h-28 p-5" style={{ background: `#${token.background}`, color: `#${token.textPrimary}` }}><div className="h-1 w-12" style={{ background: `#${token.primary}` }} /><p className="mt-4 text-lg font-bold">{token.label}</p><p className="mt-1 text-xs opacity-70">{token.mood.join(" · ")}</p></div>
+            <div className="flex gap-2 bg-white p-3">{[token.primary, ...token.accent, token.surface].map((color, i) => <span key={i} className="h-5 flex-1 rounded-full" style={{ background: `#${color}` }} />)}</div>
+          </button>
+        ))}</div></section>
+
+        <section className="mt-10"><div className="flex items-end justify-between gap-4"><div><h2 className="text-xl font-bold">2. 페이지별 목차 승인</h2><p className="mt-1 text-sm text-zinc-500">각 장의 메시지와 시각자료 계획을 먼저 검토합니다.</p></div><button onClick={requestPlan} disabled={loading} className="rounded-full border border-zinc-300 px-4 py-2 text-sm hover:bg-zinc-50">목차 다시 설계</button></div>
+          <div className="mt-4 space-y-3">{planResult.plan.map((p) => <article key={p.index} className="grid gap-3 rounded-2xl border border-zinc-200 p-5 md:grid-cols-[3rem_1fr_1fr]">
+            <div className="text-2xl font-bold text-zinc-300">{String(p.index + 1).padStart(2, "0")}</div><div><div className="flex flex-wrap items-center gap-2"><h3 className="font-bold">{p.sectionTitle}</h3><span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-600">{p.layouts[0]}</span></div><p className="mt-2 text-sm leading-relaxed text-zinc-600">{p.purpose}</p></div><div className="rounded-xl bg-zinc-50 p-3"><p className="text-[11px] font-semibold tracking-wider text-emerald-700">VISUAL PLAN</p><p className="mt-1 text-sm leading-relaxed text-zinc-700">{p.visualBrief}</p><p className="mt-2 text-xs text-zinc-400">근거: {p.evidenceNeed}</p></div>
+          </article>)}</div>
+        </section>
+        {error && <p className="mt-6 rounded-lg bg-red-50 p-4 text-sm text-red-700">{error}</p>}
+        <div className="sticky bottom-4 mt-8 flex gap-3 rounded-2xl border border-zinc-200 bg-white/95 p-4 shadow-xl backdrop-blur"><button onClick={() => setPlanResult(null)} className="rounded-full border border-zinc-300 px-6 py-3 text-sm">입력 수정</button><button onClick={generateApprovedDeck} disabled={loading} className="flex-1 rounded-full bg-zinc-900 px-6 py-3 font-medium text-white disabled:opacity-50">{loading ? "승인한 설계로 제작 중…" : "이 목차와 디자인으로 PPT 제작"}</button></div>
+      </div>
+    );
+  }
+
+  // ---- Step 2: the type-specific intake form -----------------------------
   return (
     <div className="mx-auto min-h-screen max-w-3xl px-6 py-10">
-      <Link href="/" className="text-sm text-zinc-500 hover:underline">
-        ← 홈으로
-      </Link>
-      <h1 className="mt-2 text-2xl font-bold text-zinc-900">새 문서 만들기</h1>
+      <button onClick={() => setDocType(null)} className="text-sm text-zinc-500 hover:underline">
+        ← 유형 다시 고르기
+      </button>
 
-      <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-5">
-        <div>
-          <label className="mb-2 block text-sm font-medium text-zinc-700">문서 종류</label>
-          <div className="grid grid-cols-3 gap-2">
-            {DOC_TYPE_OPTIONS.map((opt) => (
-              <button
-                type="button"
-                key={opt.value}
-                onClick={() => setDocType(opt.value)}
-                className={`rounded-xl border p-3 text-left text-sm transition ${
-                  docType === opt.value
-                    ? "border-zinc-900 bg-zinc-900 text-white"
-                    : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400"
-                }`}
-              >
-                <div className="font-semibold">{opt.label}</div>
-                <div className={`mt-0.5 text-xs ${docType === opt.value ? "text-zinc-300" : "text-zinc-500"}`}>
-                  {opt.hint}
+      <div className="mt-2 flex items-baseline justify-between gap-4">
+        <h1 className="text-2xl font-bold text-zinc-900">{spec.label}</h1>
+        {estimate !== null && (
+          <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600">
+            예상 {estimate}장
+          </span>
+        )}
+      </div>
+      <div className={`mt-2 rounded-lg px-3 py-2 text-xs leading-relaxed ${aiReady === false ? "bg-amber-50 text-amber-800" : "bg-emerald-50 text-emerald-800"}`}>
+        {aiReady === true ? (
+          <>✓ AI 연결 완료 — 예상 장수만큼 내용과 시각자료를 생성할 수 있습니다.</>
+        ) : aiReady === false ? (
+          <>AI 키(<code className="font-mono">ANTHROPIC_API_KEY</code>)가 없습니다. 현재는 섹션당 1장짜리 <b>{spec.sections.length}장 뼈대</b>만 생성됩니다.</>
+        ) : (
+          <>AI 연결 상태를 확인하고 있습니다…</>
+        )}
+      </div>
+      <p className="mt-1 text-sm text-zinc-500">{spec.description}</p>
+
+      <form onSubmit={handleSubmit} className="mt-6 space-y-6">
+        {grouped.map(({ group, fields }) => (
+          <fieldset key={group} className="rounded-xl border border-zinc-200 p-4">
+            <legend className="px-1 text-sm font-medium text-zinc-700">{FIELD_GROUP_LABEL[group]}</legend>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {fields.map((field) => (
+                <div key={field.name} className={field.type === "textarea" ? "sm:col-span-2" : ""}>
+                  <label className="block text-sm font-medium text-zinc-700">
+                    {field.label} {field.required && <span className="text-red-500">*</span>}
+                  </label>
+                  {field.type === "textarea" ? (
+                    <textarea
+                      rows={3}
+                      placeholder={field.placeholder}
+                      value={values[field.name] ?? ""}
+                      onChange={(e) => setValues((v) => ({ ...v, [field.name]: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm leading-relaxed focus:border-zinc-900 focus:outline-none"
+                    />
+                  ) : (
+                    <input
+                      type={field.type}
+                      placeholder={field.placeholder}
+                      value={values[field.name] ?? ""}
+                      onChange={(e) => setValues((v) => ({ ...v, [field.name]: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none"
+                    />
+                  )}
+                  {field.help && <p className="mt-1 text-xs text-zinc-400">{field.help}</p>}
                 </div>
-              </button>
-            ))}
-          </div>
+              ))}
+            </div>
+          </fieldset>
+        ))}
+
+        <div className="rounded-xl bg-zinc-50 p-4">
+          <p className="text-xs font-medium text-zinc-600">이 유형의 구성 순서</p>
+          <p className="mt-1.5 text-xs leading-relaxed text-zinc-500">
+            {spec.sections.map((s) => s.title).join(" → ")}
+          </p>
         </div>
 
-        <Field name="topic" label="주제" required placeholder="예: 생성형 AI 업무 활용 교육" />
-        <Field name="institutionName" label="대상 기관명" required placeholder="예: 창원시 청년센터" />
-        <Field name="institutionUrl" label="기관 홈페이지 URL (선택)" placeholder="https://..." />
-        <div className="grid grid-cols-2 gap-4">
-          <Field name="audience" label="대상·청중" placeholder="예: 청년 소상공인 20명" />
-          <Field name="durationMinutes" label="교육/발표 시간(분)" type="number" placeholder="120" />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <Field name="slideCount" label="슬라이드 수 (선택)" type="number" placeholder="자동" />
-          <Field name="tone" label="문체" placeholder="예: 쉽고 친절하게" />
-        </div>
-        <Field
-          name="mustInclude"
-          label="반드시 포함할 내용 (선택)"
-          placeholder="예: 실습은 스마트폰 위주로, SNS 게시물 만들기 포함"
-          textarea
-        />
-
-        <fieldset className="rounded-xl border border-zinc-200 p-4">
-          <legend className="px-1 text-sm font-medium text-zinc-700">발표자 / 강사 정보</legend>
-          <div className="grid grid-cols-2 gap-4">
-            <Field name="presenterName" label="이름" placeholder="예: 문정수" />
-            <Field name="presenterTitle" label="직함" placeholder="예: AI 강사" />
-            <Field name="presenterOrg" label="소속" placeholder="예: OO AI콘텐츠연구원" />
-            <Field name="contact" label="연락처" placeholder="이메일 또는 전화번호" />
-          </div>
-          <Field name="presenterBio" label="소개 (선택)" textarea placeholder="경력, 실적 등" />
-        </fieldset>
+        {error && <p className="rounded-lg bg-red-50 p-4 text-sm text-red-700">{error}</p>}
 
         <button
           type="submit"
           disabled={loading}
-          className="rounded-full bg-zinc-900 px-6 py-3 font-medium text-white hover:bg-zinc-700 disabled:opacity-50"
+          className="w-full rounded-full bg-zinc-900 px-6 py-3 font-medium text-white hover:bg-zinc-700 disabled:opacity-50"
         >
-          {loading ? "만드는 중이에요..." : "PPT 생성하기"}
+          {loading ? "조사하고 목차를 설계하는 중이에요…" : "AI 조사·맞춤 목차 만들기"}
         </button>
+        <p className="text-center text-xs text-zinc-400">
+          먼저 조사 결과·목차·디자인을 승인한 뒤 최종 PPT를 만듭니다.
+        </p>
       </form>
-
-      {error && <p className="mt-6 rounded-lg bg-red-50 p-4 text-sm text-red-700">{error}</p>}
-
-      {deck && (
-        <div className="mt-8 rounded-2xl border border-zinc-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-zinc-900">{deck.fileName}</h2>
-              <p className="mt-1 text-sm text-zinc-500">
-                유형: {deck.classification.label} · {deck.classification.reason}
-              </p>
-              <p className="mt-1 text-sm text-zinc-500">
-                디자인: {deck.design.label} {deck.usedLlm ? "· AI 생성" : "· 기본 템플릿(AI 키 없음)"}
-              </p>
-            </div>
-            <a
-              href={`/api/download/${deck.id}`}
-              className="rounded-full bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-zinc-700"
-            >
-              .pptx 다운로드
-            </a>
-          </div>
-
-          <div className="mt-4 flex gap-2">
-            {[deck.design.background, deck.design.primary, ...deck.design.accent].map((c, i) => (
-              <div key={i} className="h-8 w-8 rounded-full border border-zinc-200" style={{ backgroundColor: `#${c}` }} />
-            ))}
-          </div>
-
-          {deck.qa.issues.length > 0 && (
-            <div className="mt-4 space-y-1 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
-              {deck.qa.issues.map((issue, i) => (
-                <div key={i}>
-                  {issue.severity === "error" ? "⚠️" : "ℹ️"} {issue.message}
-                </div>
-              ))}
-            </div>
-          )}
-
-          <ol className="mt-4 space-y-1.5">
-            {deck.slides.map((s, i) => (
-              <li key={i} className="flex gap-2 text-sm text-zinc-700">
-                <span className="w-16 shrink-0 rounded bg-zinc-100 px-2 py-0.5 text-center text-xs text-zinc-500">
-                  {LAYOUT_LABEL[s.layout] ?? s.layout}
-                </span>
-                <span>{s.title || s.quote || "-"}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Field({
-  name,
-  label,
-  required,
-  placeholder,
-  type = "text",
-  textarea = false,
-}: {
-  name: string;
-  label: string;
-  required?: boolean;
-  placeholder?: string;
-  type?: string;
-  textarea?: boolean;
-}) {
-  const common =
-    "mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none";
-  return (
-    <div>
-      <label className="block text-sm font-medium text-zinc-700">
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
-      {textarea ? (
-        <textarea name={name} placeholder={placeholder} rows={2} className={common} />
-      ) : (
-        <input name={name} type={type} required={required} placeholder={placeholder} className={common} />
-      )}
     </div>
   );
 }

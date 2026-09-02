@@ -5,11 +5,9 @@ import { listDecks } from "@/lib/storage";
 // at build time (when the Supabase env vars may not even be set yet).
 export const dynamic = "force-dynamic";
 
-const DOC_TYPE_LABEL: Record<string, string> = {
-  proposal: "제안서",
-  presentation: "발표 PPT",
-  intro: "소개서",
-};
+import { DOC_TYPES } from "@/lib/doctypes/registry";
+
+const DOC_TYPE_LABEL: Record<string, string> = Object.fromEntries(DOC_TYPES.map((d) => [d.id, d.label]));
 
 export default async function ProjectsPage() {
   const decks = await listDecks();
@@ -39,12 +37,20 @@ export default async function ProjectsPage() {
                   {new Date(deck.createdAt).toLocaleString("ko-KR")}
                 </p>
               </div>
-              <a
-                href={`/api/download/${deck.id}`}
-                className="rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
-              >
-                다운로드
-              </a>
+              <div className="flex shrink-0 gap-2">
+                <Link
+                  href={`/deck/${deck.id}`}
+                  className="rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
+                >
+                  미리보기·편집
+                </Link>
+                <a
+                  href={`/api/download/${deck.id}`}
+                  className="rounded-full bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"
+                >
+                  다운로드
+                </a>
+              </div>
             </li>
           ))}
         </ul>
