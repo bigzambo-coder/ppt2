@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DesignToken, DocType } from "@/lib/types";
 import type { PlannedSlide } from "@/lib/content/blueprint";
+import { SlidePreview } from "@/app/deck/[id]/SlidePreview";
 import { DOC_TYPES, getDocTypeSpec } from "@/lib/doctypes/registry";
 import { FIELD_GROUP_LABEL, IntakeField, resolveSlideCount } from "@/lib/doctypes/spec";
 
@@ -16,6 +17,8 @@ type PlanResult = {
   slideCount: number;
   outlineError?: string;
 };
+type InterviewQuestion = { id: string; label: string; why: string; type: "text" | "textarea" | "select"; options?: string[]; required: boolean };
+type SampleResult = { slides: import("@/lib/types").SlideContent[]; sourceIndices: number[]; design: DesignToken; usedLlm: boolean; error?: string };
 
 export default function NewProjectPage() {
   const router = useRouter();
@@ -26,6 +29,9 @@ export default function NewProjectPage() {
   const [aiReady, setAiReady] = useState<boolean | null>(null);
   const [planResult, setPlanResult] = useState<PlanResult | null>(null);
   const [selectedVariant, setSelectedVariant] = useState(0);
+  const [interviewQuestions, setInterviewQuestions] = useState<InterviewQuestion[] | null>(null);
+  const [interviewAnswers, setInterviewAnswers] = useState<Record<string, string>>({});
+  const [sampleResult, setSampleResult] = useState<SampleResult | null>(null);
 
   useEffect(() => {
     fetch("/api/status")
@@ -61,7 +67,7 @@ export default function NewProjectPage() {
       const res = await fetch("/api/plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ docType: spec.id, fields: values }),
+        body: JSON.stringify({ docType: spec.id, fields: enrichedFields() }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "조사와 목차 설계에 실패했어요.");
@@ -76,7 +82,31 @@ export default function NewProjectPage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    await requestPlan();
+    if (!spec) return;
+    if (spec.id !== "lecture") return requestPlan();
+    setLoading(true); setError(null);
+    try {
+      const res = await fetch("/api/interview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ docType: spec.id, fields: values }) });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "맞춤 질문 생성에 실패했어요.");
+      setInterviewQuestions(json.questions ?? []); setLoading(false);
+    } catch (err) { setError(err instanceof Error ? err.message : "맞춤 질문 생성에 실패했어요."); setLoading(false); }
+  }
+
+  function enrichedFields() {
+    const interview = interviewQuestions?.map((q) => `${q.label}: ${interviewAnswers[q.id] || "답변 없음"}`).join("\n") ?? "";
+    return interview ? { ...values, aiInterview: interview } : values;
+  }
+
+  async function createSample() {
+    if (!spec || !planResult) return;
+    setLoading(true); setError(null);
+    try {
+      const res = await fetch("/api/sample", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ docType: spec.id, fields: enrichedFields(), approvedPlan: planResult.plan, designVariant: selectedVariant }) });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "대표 시안 생성에 실패했어요.");
+      setSampleResult(json as SampleResult); setLoading(false);
+    } catch (err) { setError(err instanceof Error ? err.message : "대표 시안 생성에 실패했어요."); setLoading(false); }
   }
 
   async function generateApprovedDeck() {
@@ -85,7 +115,7 @@ export default function NewProjectPage() {
     try {
       const res = await fetch("/api/generate", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ docType: spec.id, fields: values, approvedPlan: planResult.plan, designVariant: selectedVariant }),
+        body: JSON.stringify({ docType: spec.id, fields: enrichedFields(), approvedPlan: planResult.plan, designVariant: selectedVariant }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "최종 PPT 생성에 실패했어요.");
@@ -131,6 +161,32 @@ export default function NewProjectPage() {
     );
   }
 
+  if (interviewQuestions && !planResult) {
+    const missing = interviewQuestions.some((q) => q.required && !interviewAnswers[q.id]?.trim());
+    return <div className="mx-auto min-h-screen max-w-3xl px-6 py-10 text-zinc-900">
+      <button onClick={() => setInterviewQuestions(null)} className="text-sm text-zinc-500 hover:underline">← 기본 정보 수정</button>
+      <p className="mt-4 text-xs font-semibold tracking-[0.18em] text-emerald-700">HIGH QUALITY · STEP 2</p>
+      <h1 className="mt-1 text-3xl font-bold">AI가 강의 품질에 필요한 내용을 질문합니다</h1>
+      <p className="mt-2 text-sm leading-relaxed text-zinc-500">이미 입력한 내용은 다시 묻지 않습니다. 답변은 조사·목차·실습·시각자료 계획에 함께 반영됩니다.</p>
+      <div className="mt-8 space-y-5">{interviewQuestions.map((q, i) => <label key={q.id} className="block rounded-2xl border border-zinc-200 p-5">
+        <span className="text-xs font-bold text-emerald-700">QUESTION {i + 1}</span><span className="mt-1 block text-lg font-bold">{q.label}{q.required && <span className="text-red-500"> *</span>}</span><span className="mt-1 block text-xs text-zinc-400">{q.why}</span>
+        {q.type === "select" ? <select value={interviewAnswers[q.id] ?? ""} onChange={(e) => setInterviewAnswers((a) => ({ ...a, [q.id]: e.target.value }))} className="mt-4 w-full rounded-xl border border-zinc-300 bg-white px-4 py-3"><option value="">선택해 주세요</option>{q.options?.map((o) => <option key={o}>{o}</option>)}</select> : q.type === "textarea" ? <textarea rows={4} value={interviewAnswers[q.id] ?? ""} onChange={(e) => setInterviewAnswers((a) => ({ ...a, [q.id]: e.target.value }))} className="mt-4 w-full rounded-xl border border-zinc-300 px-4 py-3 leading-relaxed" /> : <input value={interviewAnswers[q.id] ?? ""} onChange={(e) => setInterviewAnswers((a) => ({ ...a, [q.id]: e.target.value }))} className="mt-4 w-full rounded-xl border border-zinc-300 px-4 py-3" />}
+      </label>)}</div>
+      {error && <p className="mt-6 rounded-lg bg-red-50 p-4 text-sm text-red-700">{error}</p>}
+      <button onClick={requestPlan} disabled={loading || missing} className="mt-8 w-full rounded-full bg-zinc-900 px-6 py-3 font-medium text-white disabled:opacity-40">{loading ? "답변을 분석하고 조사하는 중…" : "답변 분석·자료 조사·맞춤 목차 만들기"}</button>
+    </div>;
+  }
+
+  if (sampleResult && planResult) {
+    return <div className="mx-auto min-h-screen max-w-6xl px-6 py-10 text-zinc-900">
+      <button onClick={() => setSampleResult(null)} className="text-sm text-zinc-500 hover:underline">← 목차와 디자인 다시 선택</button>
+      <p className="mt-4 text-xs font-semibold tracking-[0.18em] text-emerald-700">HIGH QUALITY · STEP 4</p><h1 className="mt-1 text-3xl font-bold">대표 슬라이드 3장을 먼저 확인하세요</h1><p className="mt-2 text-sm text-zinc-500">표지·핵심 설명·실습 시안입니다. 승인하면 같은 디자인 체계로 전체 덱을 제작합니다.</p>
+      <div className="mt-8 grid gap-6 lg:grid-cols-3">{sampleResult.slides.map((slide, i) => <div key={i}><div className="overflow-hidden rounded-2xl border border-zinc-200 shadow-lg"><SlidePreview slide={slide} design={sampleResult.design} /></div><p className="mt-2 text-sm font-semibold">전체 목차 {sampleResult.sourceIndices[i] + 1}번 · {slide.title}</p><p className="text-xs text-zinc-400">{slide.layout}</p></div>)}</div>
+      {sampleResult.error && <p className="mt-6 rounded-lg bg-amber-50 p-4 text-sm text-amber-800">{sampleResult.error}</p>}{error && <p className="mt-6 rounded-lg bg-red-50 p-4 text-sm text-red-700">{error}</p>}
+      <div className="mt-8 flex gap-3"><button onClick={() => setSampleResult(null)} className="rounded-full border border-zinc-300 px-6 py-3">시안 다시 선택</button><button onClick={generateApprovedDeck} disabled={loading || !sampleResult.usedLlm} className="flex-1 rounded-full bg-zinc-900 px-6 py-3 font-medium text-white disabled:opacity-40">{loading ? "전체 PPT 제작·검수 중…" : "시안 승인하고 전체 PPT 만들기"}</button></div>
+    </div>;
+  }
+
   if (planResult) {
     return (
       <div className="mx-auto min-h-screen max-w-5xl px-6 py-10 text-zinc-900">
@@ -157,7 +213,7 @@ export default function NewProjectPage() {
           </article>)}</div>
         </section>
         {error && <p className="mt-6 rounded-lg bg-red-50 p-4 text-sm text-red-700">{error}</p>}
-        <div className="sticky bottom-4 mt-8 flex gap-3 rounded-2xl border border-zinc-200 bg-white/95 p-4 shadow-xl backdrop-blur"><button onClick={() => setPlanResult(null)} className="rounded-full border border-zinc-300 px-6 py-3 text-sm">입력 수정</button><button onClick={generateApprovedDeck} disabled={loading} className="flex-1 rounded-full bg-zinc-900 px-6 py-3 font-medium text-white disabled:opacity-50">{loading ? "승인한 설계로 제작 중…" : "이 목차와 디자인으로 PPT 제작"}</button></div>
+        <div className="sticky bottom-4 mt-8 flex gap-3 rounded-2xl border border-zinc-200 bg-white/95 p-4 shadow-xl backdrop-blur"><button onClick={() => { setPlanResult(null); setInterviewQuestions(null); }} className="rounded-full border border-zinc-300 px-6 py-3 text-sm">입력 수정</button><button onClick={createSample} disabled={loading} className="flex-1 rounded-full bg-zinc-900 px-6 py-3 font-medium text-white disabled:opacity-50">{loading ? "대표 3장 시안을 만드는 중…" : "목차 승인하고 대표 3장 시안 보기"}</button></div>
       </div>
     );
   }
@@ -236,7 +292,7 @@ export default function NewProjectPage() {
           disabled={loading}
           className="w-full rounded-full bg-zinc-900 px-6 py-3 font-medium text-white hover:bg-zinc-700 disabled:opacity-50"
         >
-          {loading ? "조사하고 목차를 설계하는 중이에요…" : "AI 조사·맞춤 목차 만들기"}
+          {loading ? "주제에 맞는 질문을 설계하는 중이에요…" : spec.id === "lecture" ? "AI 맞춤 질문 시작" : "AI 조사·맞춤 목차 만들기"}
         </button>
         <p className="text-center text-xs text-zinc-400">
           먼저 조사 결과·목차·디자인을 승인한 뒤 최종 PPT를 만듭니다.

@@ -91,6 +91,11 @@ export function buildUserPrompt(input: {
     lines.push(`# 사용자가 입력한 정보 (이 내용을 실제로 반영할 것)`);
     lines.push(...fieldLines);
   }
+  if (brief.fields.aiInterview?.trim()) {
+    lines.push("");
+    lines.push("# AI 맞춤 인터뷰 답변 (강의 사례·실습·난이도·환경에 반드시 반영)");
+    lines.push(brief.fields.aiInterview.trim());
+  }
 
   if (sources.length > 0) {
     lines.push("");

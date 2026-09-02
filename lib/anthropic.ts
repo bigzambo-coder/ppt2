@@ -174,6 +174,59 @@ export interface OutlinePage {
   research: boolean;
 }
 
+export interface InterviewQuestion {
+  id: string;
+  label: string;
+  why: string;
+  type: "text" | "textarea" | "select";
+  options?: string[];
+  required: boolean;
+}
+
+const INTERVIEW_TOOL = {
+  name: "emit_questions",
+  description: "Return only the consequential questions needed to design a high-quality lecture deck.",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      questions: {
+        type: "array" as const, minItems: 4, maxItems: 8,
+        items: {
+          type: "object" as const,
+          properties: {
+            id: { type: "string" as const }, label: { type: "string" as const }, why: { type: "string" as const },
+            type: { type: "string" as const, enum: ["text", "textarea", "select"] },
+            options: { type: "array" as const, items: { type: "string" as const } }, required: { type: "boolean" as const },
+          },
+          required: ["id", "label", "why", "type", "required"],
+        },
+      },
+    }, required: ["questions"],
+  },
+};
+
+export async function generateInterviewQuestions(input: {
+  topic: string; institutionName: string; audience?: string; durationMinutes?: number; knownFields: Record<string, string>;
+}): Promise<{ questions: InterviewQuestion[]; error?: string }> {
+  const anthropic = getClient();
+  if (!anthropic) return { questions: [], error: "ANTHROPIC_API_KEY가 설정되지 않았어요." };
+  const known = Object.entries(input.knownFields).filter(([, v]) => String(v).trim()).map(([k, v]) => `${k}: ${v}`).join("\n");
+  try {
+    const message = await anthropic.messages.create({
+      model: MODEL, max_tokens: 4000,
+      system: `너는 성인교육과 강의 설계 전문가다. 이미 받은 내용을 다시 묻지 말고, 결과물의 품질을 실제로 바꾸는 질문만 4~7개 만든다. 질문은 주제에 특화해야 하며 일반적인 만족도 질문은 금지한다. 학습자의 사전경험, 최종 산출물, 실습 환경/기기, 사용 가능한 도구/계정, 실제 업무·생활 사례, 반드시 다룰 오해나 위험, 보유한 화면·데이터·자료 중 누락된 것을 우선한다. 선택지가 자연스러운 질문은 select로 만들고 options를 2~5개 제공한다. 개인정보나 비밀자료의 입력을 요구하지 않는다. emit_questions로만 응답한다.`,
+      messages: [{ role: "user", content: `주제: ${input.topic}\n기관: ${input.institutionName}\n대상: ${input.audience ?? "미정"}\n시간: ${input.durationMinutes ?? "미정"}분\n이미 받은 내용:\n${known}` }],
+      tools: [INTERVIEW_TOOL], tool_choice: { type: "tool", name: "emit_questions" },
+    });
+    const toolUse = message.content.find((b) => b.type === "tool_use");
+    if (!toolUse || toolUse.type !== "tool_use") return { questions: [], error: "AI 질문 형식이 올바르지 않아요." };
+    const data = toolUse.input as { questions?: InterviewQuestion[] };
+    return { questions: Array.isArray(data.questions) ? data.questions.slice(0, 8) : [] };
+  } catch (err) {
+    return { questions: [], error: `AI 질문 생성 실패: ${err instanceof Error ? err.message : String(err)}` };
+  }
+}
+
 const OUTLINE_TOOL = {
   name: "emit_outline",
   description: "Return a topic-specific, page-by-page presentation outline before slide copy is written.",
