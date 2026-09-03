@@ -20,9 +20,9 @@ type PlanResult = {
 type InterviewQuestion = { id: string; label: string; why: string; type: "text" | "textarea" | "select"; options?: string[]; required: boolean };
 type SampleResult = { slides: import("@/lib/types").SlideContent[]; sourceIndices: number[]; design: DesignToken; usedLlm: boolean; error?: string };
 
-export default function NewProjectPage() {
+export default function NewProjectPage({ initialDocType = null }: { initialDocType?: DocType | null } = {}) {
   const router = useRouter();
-  const [docType, setDocType] = useState<DocType | null>(null);
+  const [docType, setDocType] = useState<DocType | null>(initialDocType);
   const [values, setValues] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -139,9 +139,9 @@ export default function NewProjectPage() {
 
         <div className="mt-6 space-y-3">
           {DOC_TYPES.map((d) => (
-            <button
+            <Link
               key={d.id}
-              onClick={() => setDocType(d.id)}
+              href={`/new/${d.id}`}
               className="flex w-full items-start justify-between gap-4 rounded-xl border border-zinc-200 p-5 text-left transition hover:border-zinc-900 hover:bg-zinc-50"
             >
               <span>
@@ -154,7 +154,7 @@ export default function NewProjectPage() {
                 </span>
               </span>
               <span className="mt-1 shrink-0 text-zinc-300">→</span>
-            </button>
+            </Link>
           ))}
         </div>
       </div>

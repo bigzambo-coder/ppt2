@@ -89,6 +89,7 @@ export interface DesignToken {
 
 export type SlideLayout =
   | "cover"
+  | "agenda"
   | "divider"
   | "bullets"
   | "compare"
@@ -105,6 +106,7 @@ export type SlideLayout =
 
 export const ALL_LAYOUTS: SlideLayout[] = [
   "cover",
+  "agenda",
   "divider",
   "bullets",
   "compare",

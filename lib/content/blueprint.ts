@@ -28,7 +28,7 @@ function pageDirection(section: DocTypeSpec["sections"][number], layout: SlideLa
   const key = `${section.id} ${section.title} ${section.purpose}`;
   if (layout === "cover") return { narrativeJob: "발표의 중심 약속을 한 문장으로 각인", composition: "최소 정보의 표지, 강한 타이포그래피와 단일 키 비주얼", visualBrief: "주제를 상징하는 고품질 사진·일러스트 1개 또는 절제된 그래픽", evidenceNeed: "기관명·발표명·발표자처럼 사용자가 입력한 정보" };
   if (layout === "closing") return { narrativeJob: "첫 장의 질문을 회수하고 다음 행동을 요청", composition: "결론 문장과 행동 요청을 크게 분리", visualBrief: "핵심 메시지를 보조하는 상징 이미지 또는 여백 중심 마감", evidenceNeed: "연락처·실행 요청 등 입력된 사실" };
-  if (/agenda|목차|순서|개요/.test(key)) return { narrativeJob: "전체 흐름과 각 구간의 역할을 한눈에 안내", composition: "3~6개 구간을 번호·시간·연결선으로 보여주는 로드맵", visualBrief: "텍스트 목록 대신 타임라인·경로도·섹션 맵", evidenceNeed: "실제 섹션명과 발표 시간" };
+  if (layout === "agenda" || /agenda|목차|순서|개요/.test(key)) return { narrativeJob: "전체 흐름과 각 구간의 역할을 한눈에 안내", composition: "2~6개 구간을 큰 번호와 구분선으로 보여주는 전용 목차", visualBrief: "문장 목록이 아니라 번호·시간·섹션명의 정보 위계", evidenceNeed: "실제 섹션명과 발표 시간" };
   if (/시장|성과|지표|통계|규모|추세|정량|결과/.test(key)) return { narrativeJob: "숫자에서 청중이 알아야 할 변화와 의미를 증명", composition: "그래프 70% + 우측 핵심 해석 30%", visualBrief: "추세=선, 항목 비교=막대, 구성비=도넛. 실제 수치가 없으면 stats나 비교표로 전환", evidenceNeed: "출처가 있는 수치·기간·단위·표본" };
   if (/방법|사용|시연|실습|과정|절차|추진|운영/.test(key)) return { narrativeJob: "청중이 그대로 따라 할 수 있도록 행동 순서를 설명", composition: "실제 화면 또는 결과물 중심, 단계 번호와 짧은 콜아웃", visualBrief: "제품 화면 캡처·전후 화면·3~5단계 과정도", evidenceNeed: "실제 입력값, 수행 단계, 예상 결과와 성공 기준" };
   if (/문제|배경|필요|왜|현황|한계/.test(key)) return { narrativeJob: "현재 상태의 긴장과 해결 필요성을 납득", composition: "현상 이미지 또는 근거 차트 + 한 문장 결론", visualBrief: "현장 사진·비포/애프터·원인 구조·근거 그래프 중 하나", evidenceNeed: "현재 상태를 입증하는 사례 또는 출처" };

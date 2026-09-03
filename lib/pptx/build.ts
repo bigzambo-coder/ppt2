@@ -15,9 +15,11 @@ import { renderProfile } from "./layouts/profile";
 import { renderClosing } from "./layouts/closing";
 import { renderVisual } from "./layouts/visual";
 import { renderChart } from "./layouts/chart";
+import { renderAgenda } from "./layouts/agenda";
 
 const RENDERERS: Record<SlideLayout, (slide: PptxGenJS.Slide, content: SlideContent, design: DesignToken) => void> = {
   cover: renderCover,
+  agenda: renderAgenda,
   divider: renderDivider,
   bullets: renderBullets,
   compare: renderCompare,

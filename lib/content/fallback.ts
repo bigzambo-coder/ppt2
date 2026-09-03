@@ -185,6 +185,9 @@ function fill(
       return { ...base, milestones: milestones.length > 0 ? milestones : [{ when: "", what: prompt }] };
     }
 
+    case "agenda":
+      return { ...base, milestones: agendaFromDuration(spec, brief.durationMinutes ?? 60).slice(0, 6) };
+
     case "cards":
       return {
         ...base,

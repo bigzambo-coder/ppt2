@@ -31,6 +31,7 @@ const SLIDE_TOOL = {
               type: "string" as const,
               enum: [
                 "cover",
+                "agenda",
                 "divider",
                 "bullets",
                 "compare",
@@ -239,7 +240,7 @@ const OUTLINE_TOOL = {
           type: "object" as const,
           properties: {
             sectionId: { type: "string" as const }, sectionTitle: { type: "string" as const }, purpose: { type: "string" as const },
-            layout: { type: "string" as const, enum: ["cover","divider","bullets","compare","process","stats","table","quote","timeline","cards","profile","visual","chart","closing"] },
+            layout: { type: "string" as const, enum: ["cover","agenda","divider","bullets","compare","process","stats","table","quote","timeline","cards","profile","visual","chart","closing"] },
             narrativeJob: { type: "string" as const }, composition: { type: "string" as const }, visualBrief: { type: "string" as const }, evidenceNeed: { type: "string" as const }, research: { type: "boolean" as const },
           },
           required: ["sectionId","sectionTitle","purpose","layout","narrativeJob","composition","visualBrief","evidenceNeed","research"],

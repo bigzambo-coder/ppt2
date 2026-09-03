@@ -5,6 +5,7 @@ import { pickDesign } from "@/lib/design/engine";
 import { buildPptx } from "@/lib/pptx/build";
 import { runQa } from "@/lib/pptx/qa";
 import { getDeckMeta, saveDeck } from "@/lib/storage";
+import { normalizeDeckSlides } from "@/lib/content/slide-contract";
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -34,7 +35,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (!existing) return NextResponse.json({ error: "문서를 찾을 수 없어요." }, { status: 404 });
 
   try {
-    const slides = Array.isArray(body.slides) && body.slides.length > 0 ? body.slides : existing.slides;
+    const slides = normalizeDeckSlides(Array.isArray(body.slides) && body.slides.length > 0 ? body.slides : existing.slides);
 
     const design =
       typeof body.designVariant === "number"

@@ -4,6 +4,7 @@ import { generateOutlineWithLlm, generateSlidesWithLlm, hasLlm, OutlinePage } fr
 import { SYSTEM_PROMPT, buildUserPrompt } from "./prompts";
 import { buildFallbackSlides } from "./fallback";
 import { PlannedSlide, buildBlueprint } from "./blueprint";
+import { normalizeDeckSlides } from "./slide-contract";
 
 export interface ContentResult {
   slides: SlideContent[];
@@ -26,6 +27,7 @@ const OUTLINE_SYSTEM = `너는 한국의 전문 프레젠테이션 전략가다.
 - 제안/보고/분석 자료는 주장→근거→의미→결정 또는 행동으로 이어지게 한다.
 - 한 페이지에 하나의 주장만 둔다. 글 목록보다 사진, 실제 화면, 비교, 과정, 표, 그래프를 우선하되 장식은 금지한다.
 - chart는 실제 숫자 근거가 있을 때만, visual은 제공된 imageUrl이 있을 때만 사용한다.
+- 진행 순서·목차 페이지는 agenda를 사용하고 2~6개의 실제 구간명과 시간/번호를 계획한다. 연혁·로드맵은 timeline으로 구분한다.
 - 첫 장은 cover, 마지막 장은 closing이다. emit_outline 도구로만 응답한다.`;
 
 function outlinePrompt(input: { brief: Brief; spec: DocTypeSpec; classification: InstitutionClassification; sources: ResearchSource[]; target: number; staticPlan: PlannedSlide[] }): string {
@@ -115,7 +117,7 @@ function reconcile(
     } satisfies SlideContent;
   });
 
-  return { slides, usedLlm: filled > 0 };
+  return { slides: normalizeDeckSlides(slides), usedLlm: filled > 0 };
 }
 
 function enrichVisualPlan(plan: PlannedSlide[], sources: ResearchSource[]): PlannedSlide[] {
@@ -169,7 +171,7 @@ export async function generateContent(input: {
     sources: input.sources,
   });
 
-  if (!hasLlm()) return { slides: fallback, plan, usedLlm: false };
+  if (!hasLlm()) return { slides: normalizeDeckSlides(fallback), plan, usedLlm: false };
 
   // Chunked: one call per CHUNK_SIZE slides, run in parallel. A single call for
   // a 40-slide deck overran max_tokens and came back truncated, which used to
@@ -211,7 +213,7 @@ export async function generateContent(input: {
   });
 
   if (!anyFilled) {
-    return { slides: fallback, plan, usedLlm: false, llmError: errors[0] ?? "AI 생성에 실패했어요." };
+    return { slides: normalizeDeckSlides(fallback), plan, usedLlm: false, llmError: errors[0] ?? "AI 생성에 실패했어요." };
   }
 
   const { slides, usedLlm } = reconcile(plan, merged, fallback);

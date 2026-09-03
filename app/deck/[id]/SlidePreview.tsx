@@ -135,6 +135,25 @@ export function SlidePreview({ slide, design }: { slide: SlideContent; design: D
         </Frame>
       );
 
+    case "agenda": {
+      const items = (slide.milestones ?? []).slice(0, 6);
+      return (
+        <Frame>
+          <div style={{ fontSize: "1.05cqw", color: c(design.primary), fontWeight: 700, letterSpacing: ".18em" }}>AGENDA</div>
+          <div style={{ fontFamily: `"${design.fontHeading}", sans-serif`, fontSize: "4.4cqw", fontWeight: 700, marginTop: ".8cqw" }}>{slide.title || "목차"}</div>
+          <div style={{ flex: 1, minHeight: 0, marginTop: "2.2cqw", display: "flex", flexDirection: "column", justifyContent: "space-around" }}>
+            {items.map((item, i) => (
+              <div key={i} style={{ display: "grid", gridTemplateColumns: "5cqw 1fr 14cqw", alignItems: "center", gap: "1.5cqw", borderBottom: `1px solid ${c(design.surface)}`, paddingBottom: ".7cqw" }}>
+                <div style={{ fontSize: "1.8cqw", fontWeight: 700, color: i === 0 ? accent : c(design.primary) }}>{String(i + 1).padStart(2, "0")}</div>
+                <div style={{ fontSize: "2.1cqw", fontWeight: i === 0 ? 700 : 500 }}>{item.what}</div>
+                <div style={{ fontSize: "1.45cqw", textAlign: "right", color: muted }}>{item.when}</div>
+              </div>
+            ))}
+          </div>
+        </Frame>
+      );
+    }
+
     case "bullets": {
       // Mirrors bodySize() in lib/pptx/layouts/bullets.ts so the preview shows
       // the same type scale the exported slide will use.

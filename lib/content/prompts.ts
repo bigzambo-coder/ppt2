@@ -36,12 +36,13 @@ export const SYSTEM_PROMPT = `너는 한국 기업·공공기관 대상 프레�
 
 [레이아웃별 채워야 할 항목]
 - cover: title, subtitle
-- bullets: title, bullets[]
+- agenda: title, milestones[] (2~6개, when=번호·시간, what=구간명). 일반 연혁 timeline과 구분한다.
+- bullets: title, bullets[] (3~5개)
 - compare: title, columns[] (2개, 각각 title과 items[])
-- process: title, steps[] (3~5개, 각각 title과 description)
+- process: title, steps[] (3~5개, description 30자 이내)
 - stats: title, stats[] (2~4개, 각각 value와 label)
 - table: title, table{headers[], rows[][]}
-- cards: title, cards[] (2~4개, 각각 title과 description)
+- cards: title, cards[] (정확히 3개, 각각 title과 description 70자 이내)
 - timeline: title, milestones[] (3~6개, 각각 when과 what)
 - profile: title, profile{name, role, detail}
 - visual: title, imageUrl, imageCaption, imagePosition(left/right/full), bullets[](0~3개)

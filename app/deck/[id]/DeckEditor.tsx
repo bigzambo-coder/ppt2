@@ -7,6 +7,7 @@ import { SlidePreview } from "./SlidePreview";
 
 const LAYOUT_LABEL: Record<string, string> = {
   cover: "표지",
+  agenda: "목차",
   divider: "구분",
   bullets: "목록",
   compare: "비교",
@@ -291,9 +292,9 @@ export function DeckEditor({ initialDeck }: { initialDeck: GeneratedDeck }) {
             />
           )}
 
-          {slide.layout === "timeline" && (
+          {(slide.layout === "timeline" || slide.layout === "agenda") && (
             <Area
-              label="연혁 (시점 | 내용)"
+              label={slide.layout === "agenda" ? "목차 (시간·번호 | 구간명)" : "연혁 (시점 | 내용)"}
               value={pairsToText((slide.milestones ?? []).map((m) => [m.when, m.what]))}
               onChange={(v) => patchSlide({ milestones: textToPairs(v).map(([when, what]) => ({ when, what })) })}
             />

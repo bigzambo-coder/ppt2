@@ -12,6 +12,16 @@ export interface DesignPreset extends DesignToken {
 
 const BASE_PRESETS: DesignPreset[] = [
   {
+    id: "template_kit_blue",
+    label: "Template Kit Blue",
+    background: "FFFFFF", surface: "F2F4F8", textPrimary: "14213D", textSecondary: "6B7280",
+    primary: "14213D", accent: ["2F66F6"], fontHeading: "맑은 고딕", fontBody: "맑은 고딕",
+    mood: ["전문", "교육", "정보위계"], shapeLanguage: "sharp",
+    coverStyle: "editorial", titleStyle: "index", density: "airy",
+    institutionTypes: ["public_general", "public_bid", "corporate", "school", "event"],
+    keywords: ["강의", "교육", "제안", "보고", "공공", "기업"],
+  },
+  {
     id: "public_data",
     label: "Public Data Blue",
     background: "F5F7F6",

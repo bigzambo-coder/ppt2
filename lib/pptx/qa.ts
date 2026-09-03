@@ -1,4 +1,5 @@
 import { QAIssue, QAReport, ResearchSource, SlideContent } from "../types";
+import { validateSlideContract } from "../content/slide-contract";
 
 /**
  * Phrases that signal the writer padded a slide instead of saying something.
@@ -39,6 +40,8 @@ function isEmpty(slide: SlideContent): boolean {
   switch (slide.layout) {
     case "bullets":
       return !slide.bullets?.length;
+    case "agenda":
+      return !slide.milestones?.length;
     case "compare":
       return !slide.columns?.length;
     case "process":
@@ -93,7 +96,7 @@ export function runQa(slides: SlideContent[], sources: ResearchSource[] = []): Q
     });
   }
 
-  const visualLayouts = new Set(["visual", "chart", "compare", "process", "stats", "table", "timeline", "cards"]);
+  const visualLayouts = new Set(["agenda", "visual", "chart", "compare", "process", "stats", "table", "timeline", "cards"]);
   const visualCount = slides.filter((s) => visualLayouts.has(s.layout)).length;
   if (slides.length >= 10 && visualCount / slides.length < 0.45) {
     issues.push({ severity: "warning", message: `시각 중심 슬라이드가 ${visualCount}/${slides.length}장뿐이에요 (45% 이상 권장).` });
@@ -101,6 +104,7 @@ export function runQa(slides: SlideContent[], sources: ResearchSource[] = []): Q
 
   let textOnlyStreak = 0;
   slides.forEach((slide, i) => {
+    issues.push(...validateSlideContract(slide, i));
     if (["bullets", "quote"].includes(slide.layout)) {
       textOnlyStreak++;
       if (textOnlyStreak >= 3) issues.push({ severity: "error", message: "글 중심 슬라이드가 3장 연속 배치됐어요.", slideIndex: i });
